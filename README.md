@@ -25,10 +25,6 @@ This repo documents my **12-week hands-on ML journey** — from Python to PyTorc
 | 11   | Interview Prep             | Publish Portfolio            |
 | 12   | Capstone Recap             | Final ML Journey Video       |
 
----
-
-## 🎥 YouTube Playlist  
-I’m documenting everything on video too — https://www.youtube.com/@Official_Tochi
 
 ---
 
