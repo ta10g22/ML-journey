@@ -1,4 +1,4 @@
-# 🌞 Machine Learning Summer Journey
+# 🌞 Machine Learning Journey
 
 Hi! I'm Tochi, a 3rd-year electronics student transitioning into Machine Learning.  
 This repo documents my **12-week hands-on ML journey** — from Python to PyTorch to building AI for hardware accelerators.
