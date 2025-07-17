@@ -1,0 +1,11 @@
+{
+    "python.defaultInterpreterPath": "/Users/admin/Documents/GitHub/ML-journey/week-00_python-math-backprop/.venv/bin/python",
+    "python.terminal.activateEnvironment": true,
+    "python.terminal.activateEnvInCurrentTerminal": true,
+    "files.associations": {
+        "*.py": "python"
+    },
+    "code-runner.executorMap": {
+        "python": "/Users/admin/Documents/GitHub/ML-journey/week-00_python-math-backprop/.venv/bin/python"
+    }
+}
