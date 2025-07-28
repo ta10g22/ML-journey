@@ -13,7 +13,7 @@ I built a predictor to estimate Titanic passenger survival using structured data
 ---
 
 ## 🧠 Concepts Covered
-- Classification (Logistic Regression, Decision Trees)
+- Classification (Logistic Regression, Decision Trees, Gradient boosting, Random forests)
 - Data cleaning & feature encoding
 - Model evaluation (accuracy, precision, recall)
 - Train-test split & cross-validation
