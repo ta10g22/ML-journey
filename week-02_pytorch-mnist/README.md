@@ -4,6 +4,9 @@ Welcome to Week 2 of my ML Journey!
 This week I dove into **PyTorch** and built a neural network to classify handwritten digits using the classic **MNIST** dataset.
 
 ---
+## Commands
+- To run the script you'll need to pass in 2 command line args (specify no of epochs and batch_size you want!):
+  = python mnist_classifier.py --epochs 5 --batch_size 64
 
 ## 📌 Objectives
 

@@ -136,6 +136,9 @@ def main():
 
     plot_results(num_epochs, history) 
 
+   # After training
+    torch.save(model.state_dict(), "mnist_model.pt")
+
 if __name__ == '__main__' :
     main()
 
