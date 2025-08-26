@@ -1,8 +1,19 @@
-.venv/
+# Python cache
 __pycache__/
+*.pyc
+*.pyo
+
+# Virtual environments
+.venv/
+env/
+
+# Jupyter checkpoints
 .ipynb_checkpoints/
+
+# MacOS junk
 .DS_Store
+
+# Model files / weights
 *.pt
 *.pth
 *.ckpt
-data/
