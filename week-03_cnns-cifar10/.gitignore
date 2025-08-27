@@ -13,7 +13,13 @@ env/
 # MacOS junk
 .DS_Store
 
-# Model files / weights
+# Model artifacts 
 *.pt
 *.pth
 *.ckpt
+
+# data & big archives
+data/
+*.tar
+*.tar.gz
+*.zip
