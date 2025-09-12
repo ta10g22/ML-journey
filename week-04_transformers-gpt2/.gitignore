@@ -1,0 +1,19 @@
+#ignore model files
+*.pt
+*
+
+# virtual invironments
+.venv
+
+
+#outpus
+runs/
+outputs/runs/
+**/runs/
+**/checkpoints/
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+runs/
+**/runs/
