@@ -18,19 +18,24 @@ class BasicBlock(nn.Module):
         self.conv2 = conv3x3(out_ch, out_ch, 1);     self.bn2 = nn.BatchNorm2d(out_ch)
         self.downsample = None
         if stride != 1 or in_ch != out_ch:
-            self.downsample = nn.Sequential(nn.Conv2d(in_ch, out_ch, 1, stride=stride, bias=False),
-                                            nn.BatchNorm2d(out_ch))
+            self.downsample = nn.Sequential(
+                nn.Conv2d(in_ch, out_ch, 1, stride=stride, bias=False),
+                nn.BatchNorm2d(out_ch)
+            )
     def forward(self, x):
         identity = x
         out = F.relu(self.bn1(self.conv1(x)), inplace=True)
         out = self.bn2(self.conv2(out))
-        if self.downsample is not None: identity = self.downsample(x)
+        if self.downsample is not None:
+            identity = self.downsample(x)
         return F.relu(out + identity, inplace=True)
 
 class TinyResNet(nn.Module):
     def __init__(self, num_classes=10):
         super().__init__()
-        self.stem = nn.Sequential(nn.Conv2d(3,32,3,1,1,bias=False), nn.BatchNorm2d(32), nn.ReLU(inplace=True))
+        self.stem = nn.Sequential(
+            nn.Conv2d(3,32,3,1,1,bias=False), nn.BatchNorm2d(32), nn.ReLU(inplace=True)
+        )
         self.layer1 = self._make_layer(32, 32, blocks=2, stride=1)
         self.layer2 = self._make_layer(32, 64, blocks=2, stride=2)
         self.layer3 = self._make_layer(64,128, blocks=2, stride=2)
@@ -41,7 +46,8 @@ class TinyResNet(nn.Module):
                 nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
     def _make_layer(self, in_ch, out_ch, blocks, stride):
         layers = [BasicBlock(in_ch, out_ch, stride)]
-        for _ in range(1, blocks): layers.append(BasicBlock(out_ch, out_ch, 1))
+        for _ in range(1, blocks):
+            layers.append(BasicBlock(out_ch, out_ch, 1))
         return nn.Sequential(*layers)
     def forward(self, x):
         x = self.stem(x); x = self.layer1(x); x = self.layer2(x); x = self.layer3(x)
@@ -52,15 +58,17 @@ class TinyResNet(nn.Module):
 def evaluate(model, loader, crit, device):
     model.eval(); loss_sum=0.0; correct=0; total=0
     for x,y in loader:
-        x,y = x.to(device), y.to(device)
+        x,y = x.to(device, non_blocking=True), y.to(device, non_blocking=True)
         logits = model(x); loss = crit(logits, y)
-        loss_sum += loss.item()*x.size(0); correct += (logits.argmax(1)==y).sum().item(); total += x.size(0)
+        loss_sum += loss.item()*x.size(0)
+        correct  += (logits.argmax(1)==y).sum().item()
+        total    += x.size(0)
     return loss_sum/total, correct/total
 
 def train_one_epoch(model, loader, opt, crit, device, scaler=None):
     model.train(); loss_sum=0.0; correct=0; total=0
     for x,y in loader:
-        x,y = x.to(device), y.to(device)
+        x,y = x.to(device, non_blocking=True), y.to(device, non_blocking=True)
         opt.zero_grad(set_to_none=True)
         if scaler:
             with torch.cuda.amp.autocast():
@@ -68,7 +76,9 @@ def train_one_epoch(model, loader, opt, crit, device, scaler=None):
             scaler.scale(loss).backward(); scaler.step(opt); scaler.update()
         else:
             logits = model(x); loss = crit(logits, y); loss.backward(); opt.step()
-        loss_sum += loss.item()*x.size(0); correct += (logits.argmax(1)==y).sum().item(); total += x.size(0)
+        loss_sum += loss.item()*x.size(0)
+        correct  += (logits.argmax(1)==y).sum().item()
+        total    += x.size(0)
     return loss_sum/total, correct/total
 
 def main():
@@ -81,34 +91,54 @@ def main():
     ap.add_argument('--mixed', action='store_true', help='use torch.cuda.amp if CUDA')
     args = ap.parse_args()
 
+    # Seeds
     torch.manual_seed(42); np.random.seed(42)
+
+    # Device select + log
     device = torch.device('cuda' if torch.cuda.is_available()
                           else ('mps' if torch.backends.mps.is_available() else 'cpu'))
-    CIFAR10_MEAN = (0.4914, 0.4822, 0.4465); CIFAR10_STD = (0.2470, 0.2435, 0.2616)
-    train_tfms = transforms.Compose([transforms.RandomCrop(32, padding=4),
-                                     transforms.RandomHorizontalFlip(),
-                                     transforms.ToTensor(),
-                                     transforms.Normalize(CIFAR10_MEAN, CIFAR10_STD)])
-    test_tfms  = transforms.Compose([transforms.ToTensor(),
-                                     transforms.Normalize(CIFAR10_MEAN, CIFAR10_STD)])
+    print(f"Using device: {device}")
+    if device.type == 'cuda':
+        print(f"  -> GPU: {torch.cuda.get_device_name(0)}")
+        print(f"  -> CUDA build: {torch.version.cuda}")
+        torch.backends.cudnn.benchmark = True  # autotune best algos for your shapes
+
+    # Data
+    CIFAR10_MEAN = (0.4914, 0.4822, 0.4465)
+    CIFAR10_STD  = (0.2470, 0.2435, 0.2616)
+    train_tfms = transforms.Compose([
+        transforms.RandomCrop(32, padding=4),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        transforms.Normalize(CIFAR10_MEAN, CIFAR10_STD),
+    ])
+    test_tfms  = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize(CIFAR10_MEAN, CIFAR10_STD),
+    ])
 
     train_set = datasets.CIFAR10(args.data, train=True,  download=True, transform=train_tfms)
     test_set  = datasets.CIFAR10(args.data, train=False, download=True, transform=test_tfms)
 
-    pin = torch.cuda.is_available()
-    train_loader = DataLoader(train_set, batch_size=args.bs, shuffle=True,  num_workers=2, pin_memory=pin)
-    test_loader  = DataLoader(test_set,  batch_size=args.bs, shuffle=False, num_workers=2, pin_memory=pin)
+    pin = (device.type == 'cuda')
+    num_workers = max(2, os.cpu_count() // 4 if os.cpu_count() else 2)
+    train_loader = DataLoader(train_set, batch_size=args.bs, shuffle=True,
+                              num_workers=num_workers, pin_memory=pin, persistent_workers=True)
+    test_loader  = DataLoader(test_set,  batch_size=args.bs, shuffle=False,
+                              num_workers=num_workers, pin_memory=pin, persistent_workers=True)
 
+    # Model/opt/sched
     model = TinyResNet(num_classes=10).to(device)
     crit = nn.CrossEntropyLoss()
     opt = Adam(model.parameters(), lr=args.lr, weight_decay=5e-4)
     sched = CosineAnnealingLR(opt, T_max=args.epochs)
-    scaler = torch.cuda.amp.GradScaler() if (args.mixed and torch.cuda.is_available()) else None
+    scaler = torch.cuda.amp.GradScaler() if (args.mixed and device.type == 'cuda') else None
 
+    # Train loop
     best_acc=0.0; t0=time.time()
     for epoch in range(1, args.epochs+1):
         tr_loss, tr_acc = train_one_epoch(model, train_loader, opt, crit, device, scaler)
-        va_loss, va_acc = evaluate(model, test_loader, crit, device)  # use a val split in real projects
+        va_loss, va_acc = evaluate(model, test_loader, crit, device)  # (for simplicity we eval on test)
         sched.step()
         if va_acc > best_acc:
             best_acc = va_acc; torch.save(model.state_dict(), args.out)
@@ -116,7 +146,8 @@ def main():
               f"Train loss {tr_loss:.4f} acc {tr_acc*100:5.2f}% | "
               f"Val loss {va_loss:.4f} acc {va_acc*100:5.2f}%")
 
-    print(f"Best Val Acc: {best_acc*100:.2f}% | Time: {time.time()-t0:.1f}s | Saved -> {args.out}")
+    dt = time.time() - t0
+    print(f"Best Val Acc: {best_acc*100:.2f}% | Time: {dt:.1f}s | Saved -> {args.out}")
 
 if __name__ == "__main__":
     main()
